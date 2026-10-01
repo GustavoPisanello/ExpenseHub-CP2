@@ -277,9 +277,10 @@ Cada item numerado é, em geral, um commit.
    `*.db-wal` ao `.gitignore`.
 2. `feat(data): add domain entities and status enum`: as 4 entidades e o enum.
 3. `feat(data): configure AppDbContext with SQLite`: pacotes EF Core 10.x (mesma
-   versão em todos), `AppDbContext : IdentityDbContext`, mapeamentos Fluent
-   (precisão do decimal, tamanhos máximos, relacionamentos, índice único de
-   `PaymentRecord.ExpenseId`), connection string e registro no `Program.cs`.
+   versão em todos), `AppDbContext : DbContext` (o Identity fica para a I02),
+   mapeamentos Fluent (precisão do decimal, tamanhos máximos, relacionamentos,
+   índice único de `PaymentRecord.ExpenseId`), connection string, registro no
+   `Program.cs` e `DatabaseInitializer` aplicando as migrations na inicialização.
 4. `feat(data): add initial migration`: `dotnet ef migrations add InitialCreate`.
    A pasta `Migrations/` é tratada como código gerado pelo `.editorconfig`.
 5. `docs: document database setup`: no `README.md`, documentar provider, pacote,
@@ -300,9 +301,10 @@ Casos negativos:
 
 ### Etapa 2 — I02 Identity e autenticação · **Leonardo** · branch `i02-identity-auth`
 
-1. `feat(auth): configure Identity and bearer authentication`: Identity
-   persistido no `AppDbContext`, esquema bearer, `UseAuthentication` e
-   `UseAuthorization`, e uma migration nova para as tabelas do Identity.
+1. `feat(auth): configure Identity and bearer authentication`: trocar a base do
+   `AppDbContext` para `IdentityDbContext`, configurar o esquema bearer,
+   `UseAuthentication` e `UseAuthorization`, e criar uma migration nova para as
+   tabelas do Identity.
 2. `feat(auth): add login endpoint`: `POST /login` devolve o token para
    credenciais válidas e 401 para inválidas.
 3. `feat(auth): seed roles and initial admin idempotently`:
@@ -311,7 +313,8 @@ Casos negativos:
    - e-mail e senha vêm da configuração (`Seed:AdminEmail` e `Seed:AdminPassword`, via
      `dotnet user-secrets` ou variáveis `Seed__AdminEmail` e `Seed__AdminPassword`);
    - sem senha configurada, a aplicação falha com mensagem clara, sem logar o valor;
-   - aplicar migrations e rodar o seed na inicialização.
+   - rodar o seed no `Data/DatabaseInitializer.cs`, logo depois do
+     `MigrateAsync` (criado na I01).
 4. `docs: document admin secret configuration`: comandos `dotnet user-secrets init`
    e `set` no README.
 5. Adicionar ao `ExpenseHub.Api.http` requisições de login válido e inválido, rota

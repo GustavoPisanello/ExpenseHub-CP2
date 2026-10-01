@@ -45,6 +45,11 @@ Thumbs.db
 Desktop.ini
 *.log
 
+# Banco SQLite local
+*.db
+*.db-shm
+*.db-wal
+
 # Segredos — NUNCA commitar
 *.env
 appsettings.Development.json

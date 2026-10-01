@@ -64,16 +64,52 @@ O endpoint inicial `GET /health` existe apenas para confirmar que a aplicação 
 
 ## Banco de dados
 
-Você pode utilizar Microsoft SQL Server LocalDB, Oracle Database, SQLite ou outro provider relacional compatível com Entity Framework Core.
+### Provider e pacotes
 
-A escolha não gera pontos. Documente no README do seu repositório:
+- Provider: **SQLite**, que não precisa de servidor instalado.
+- Pacote: `Microsoft.EntityFrameworkCore.Sqlite` 10.0.12.
+- Migrations: `Microsoft.EntityFrameworkCore.Design` 10.0.12 e a ferramenta local `dotnet-ef` 10.0.12, declarada em `dotnet-tools.json`.
 
-- provider e pacote utilizado;
-- configuração necessária;
-- criação ou atualização do banco;
-- como iniciar a aplicação.
+### Configuração
 
-Não versione senhas, tokens ou connection strings sensíveis.
+A connection string fica em `sources/ExpenseHub.Api/appsettings.json`:
+
+```json
+"ConnectionStrings": {
+  "Default": "Data Source=expensehub.db"
+}
+```
+
+O arquivo `expensehub.db` é criado em `sources/ExpenseHub.Api/` e não é versionado (`*.db` está no `.gitignore`). O SQLite local não usa senha.
+
+Para usar outro caminho, sobrescreva a configuração com a variável de ambiente `ConnectionStrings__Default`.
+
+### Criar ou atualizar o banco
+
+A API aplica as migrations pendentes ao iniciar, então basta executá-la.
+
+Para aplicar manualmente:
+
+```shell
+dotnet tool restore
+dotnet ef database update --project ./sources/ExpenseHub.Api
+```
+
+Para criar uma nova migration depois de alterar o modelo:
+
+```shell
+dotnet ef migrations add <NomeDaMigration> --project ./sources/ExpenseHub.Api
+```
+
+Para recriar o banco do zero, apague `sources/ExpenseHub.Api/expensehub.db` e inicie a API novamente.
+
+### Iniciar a aplicação
+
+```shell
+dotnet run --project ./sources/ExpenseHub.Api/ExpenseHub.Api.csproj
+```
+
+Confira com `GET http://localhost:5245/health`.
 
 ## Testes
 
