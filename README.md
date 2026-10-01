@@ -103,6 +103,18 @@ dotnet ef migrations add <NomeDaMigration> --project ./sources/ExpenseHub.Api
 
 Para recriar o banco do zero, apague `sources/ExpenseHub.Api/expensehub.db` e inicie a API novamente.
 
+### Conta Admin inicial
+
+Ao iniciar, a API cria as roles `Admin`, `Employee`, `Approver`, `Finance` e `Auditor` e uma única conta Admin. O seed é idempotente: reiniciar a aplicação não duplica roles nem usuários.
+
+O e-mail do Admin está em `appsettings.json` (`Seed:AdminEmail`). A senha **não é versionada**: configure-a com User Secrets antes da primeira execução.
+
+```shell
+dotnet user-secrets set "Seed:AdminPassword" "<sua-senha>" --project ./sources/ExpenseHub.Api
+```
+
+A senha precisa seguir a política padrão do Identity: mínimo de 6 caracteres, com letra maiúscula, letra minúscula, número e símbolo. Fora do ambiente de desenvolvimento, use a variável de ambiente `Seed__AdminPassword`. Sem a senha configurada, a API não inicia e informa o que falta.
+
 ### Iniciar a aplicação
 
 ```shell
@@ -110,6 +122,24 @@ dotnet run --project ./sources/ExpenseHub.Api/ExpenseHub.Api.csproj
 ```
 
 Confira com `GET http://localhost:5245/health`.
+
+## Autenticação
+
+A API usa ASP.NET Core Identity com tokens bearer.
+
+- `POST /login` com `{ "email": "...", "password": "..." }` retorna `accessToken`, `expiresIn` e `refreshToken`.
+- Envie o token nas rotas protegidas com o cabeçalho `Authorization: Bearer <accessToken>`.
+- Credenciais inválidas retornam `401`; corpo inválido retorna `400`.
+
+As requisições de exemplo estão em `sources/ExpenseHub.Api/ExpenseHub.Api.http`.
+
+## Swagger
+
+Em ambiente de desenvolvimento, a interface do Swagger fica em `http://localhost:5245/swagger`.
+
+1. Execute `POST /login` e copie o `accessToken` da resposta.
+2. Clique em **Authorize**, cole o token e confirme.
+3. As próximas requisições feitas pela interface enviam o token automaticamente.
 
 ## Testes
 

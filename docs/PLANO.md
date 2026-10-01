@@ -147,7 +147,7 @@ Higiene, Estilo, Boas práticas) vale 20 pontos, e cada regra desconta uma vez.
 | Identity | `AddIdentityCore<IdentityUser>().AddRoles<IdentityRole>().AddEntityFrameworkStores<AppDbContext>().AddSignInManager()` |
 | Autenticação | Bearer token do Identity: `AddAuthentication(IdentityConstants.BearerScheme).AddBearerToken(IdentityConstants.BearerScheme)`. Não precisa de chave JWT para esconder |
 | `/register` e `/login` | Escritos por nós, com `UserManager` e `SignInManager`. **Não** usar `MapIdentityApi`, que expõe rotas extras fora do contrato |
-| API | Controllers com `[ApiController]` (validação automática com resposta 400) |
+| API | Minimal APIs em classes `internal static` dentro de `Endpoints/`. A validação usa `ValidationFilter<T>` (Data Annotations com resposta 400), porque o gerador de validação do .NET 10 ignora DTOs `internal` |
 | Erros | `AddProblemDetails()` + tratamento de exceções de domínio convertendo para 400, 403, 404 e 409 |
 | Relógio | `TimeProvider` injetado, para os testes controlarem a hora |
 | Testes | MSTest, **sem banco**. Testar domínio, policy de acesso e serviços com fakes |
@@ -162,7 +162,7 @@ sources/ExpenseHub.Api/
 ├── Dtos/          requests (com Data Annotations)
 ├── Contracts/     responses
 ├── Services/      ExpenseService, ExpenseAccessPolicy, UserAdminService, exceções de domínio
-├── Controllers/   AuthController, AdminUsersController, ExpensesController
+├── Endpoints/     AuthEndpoints, AdminUserEndpoints, ExpenseEndpoints, ValidationFilter
 └── Program.cs
 ```
 
@@ -218,7 +218,7 @@ rotas de reembolso e recebe **403**.
 
 1. Sem token ou token inválido: **401** (feito pelo framework).
 2. Nenhuma role permitida na rota (`[Authorize(Roles = "...")]`): **403**.
-3. Corpo inválido: **400** (feito pelo `[ApiController]`).
+3. Corpo inválido: **400** (feito pelo `ValidationFilter<T>`).
 4. Despesa inexistente ou fora do escopo da ação: **404**. O escopo depende da ação:
    - leitura e histórico: o filtro de visibilidade acima;
    - editar e enviar: somente despesas próprias;

@@ -1,9 +1,36 @@
 @ExpenseHub_Api_HostAddress = http://localhost:5245
+@adminEmail = admin@expensehub.local
+@adminPassword = <senha configurada no user-secrets>
 
 GET {{ExpenseHub_Api_HostAddress}}/health
 Accept: application/json
 
 ###
 
-# Os endpoints do checkpoint estão definidos em docs/REQUISITOS.md.
-# Implemente e adicione aqui as requisições usadas para validar cada issue.
+# I02 - login válido: retorna accessToken
+POST {{ExpenseHub_Api_HostAddress}}/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+###
+
+# I02 - senha incorreta: 401
+POST {{ExpenseHub_Api_HostAddress}}/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "errada"
+}
+
+###
+
+# I02 - corpo inválido: 400
+POST {{ExpenseHub_Api_HostAddress}}/login
+Content-Type: application/json
+
+{}
