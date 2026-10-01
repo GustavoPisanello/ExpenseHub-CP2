@@ -26,15 +26,15 @@ Em caso de divergência, valem os documentos oficiais:
 | Issue | Conteúdo | Peso | Depende de | Responsável |
 |---|---|---:|---|---|
 | I01 | Fundação da solução e EF Core | 4% | — | Gustavo |
-| I02 | Identity, Admin e autenticação | 9% | I01 | Leonardo |
+| I02 | Identity, Admin e autenticação | 9% | I01 | Gustavo |
 | I03 | Cadastro HTTP e gerenciamento de roles | 8% | I02 | Gustavo |
-| I04 | Criar e editar rascunho | 7% | I01, I03 | Leonardo |
+| I04 | Criar e editar rascunho | 7% | I01, I03 | Gustavo |
 | I05 | Enviar, listar e consultar | 7% | I04 | Gustavo |
 | I06 | Ownership e matriz de acesso | 10% | I02, I05 | Leonardo |
-| I07 | Aprovar e reprovar com justificativa | 12% | I06 | Gustavo |
+| I07 | Aprovar e reprovar com justificativa | 12% | I06 | Leonardo |
 | I08 | Pagamento e histórico | 8% | I06, I07 | Leonardo |
-| I09 | Testes unitários | 10% | transversal | Ambos |
-| I10 | Qualidade de Código (score do CI) | **25%** | transversal | Ambos |
+| I09 | Testes unitários | 10% | transversal | Leonardo |
+| I10 | Qualidade de Código (score do CI) | **25%** | transversal | Leonardo |
 
 Gates que limitam a nota final:
 
@@ -253,19 +253,16 @@ Os DTOs **nunca** têm `OwnerId`, `Status`, ator ou datas de sistema.
 ## 5. Ordem de execução
 
 ```text
-I01 (Gustavo)
-  └─ I02 (Leonardo)
-       ├─ I03 (Gustavo)  ┐ em paralelo
-       └─ I04 (Leonardo) ┘
-            └─ I05 (Gustavo)
-                 └─ I06 (Leonardo)
-                      └─ I07 (Gustavo)
-                           └─ I08 (Leonardo)
-                                └─ I09 + I10 (ambos)
+Gustavo:  I01 → I02 → I03 → I04 → I05
+                                     │
+                         entrega via merge na main
+                                     ▼
+Leonardo: I06 → I07 → I08 → I09 → I10
 ```
 
-Só comece uma etapa depois do merge da anterior na `main`. A exceção é o par
-I03 ∥ I04.
+O Gustavo faz as cinco primeiras issues e entrega o código ao Leonardo pela
+`main`. O Leonardo começa a I06 depois do merge da I05, a partir de um
+`git pull` da `main`. Só comece uma etapa depois do merge da anterior.
 
 ## 6. Passo a passo por etapa
 
@@ -277,9 +274,10 @@ Cada item numerado é, em geral, um commit.
    `*.db-wal` ao `.gitignore`.
 2. `feat(data): add domain entities and status enum`: as 4 entidades e o enum.
 3. `feat(data): configure AppDbContext with SQLite`: pacotes EF Core 10.x (mesma
-   versão em todos), `AppDbContext : IdentityDbContext`, mapeamentos Fluent
-   (precisão do decimal, tamanhos máximos, relacionamentos, índice único de
-   `PaymentRecord.ExpenseId`), connection string e registro no `Program.cs`.
+   versão em todos), `AppDbContext : DbContext` (o Identity fica para a I02),
+   mapeamentos Fluent (precisão do decimal, tamanhos máximos, relacionamentos,
+   índice único de `PaymentRecord.ExpenseId`), connection string, registro no
+   `Program.cs` e `DatabaseInitializer` aplicando as migrations na inicialização.
 4. `feat(data): add initial migration`: `dotnet ef migrations add InitialCreate`.
    A pasta `Migrations/` é tratada como código gerado pelo `.editorconfig`.
 5. `docs: document database setup`: no `README.md`, documentar provider, pacote,
@@ -298,11 +296,12 @@ Casos negativos:
 - os testes não dependem do provider;
 - banco local e credenciais não são versionados.
 
-### Etapa 2 — I02 Identity e autenticação · **Leonardo** · branch `i02-identity-auth`
+### Etapa 2 — I02 Identity e autenticação · **Gustavo** · branch `i02-identity-auth`
 
-1. `feat(auth): configure Identity and bearer authentication`: Identity
-   persistido no `AppDbContext`, esquema bearer, `UseAuthentication` e
-   `UseAuthorization`, e uma migration nova para as tabelas do Identity.
+1. `feat(auth): configure Identity and bearer authentication`: trocar a base do
+   `AppDbContext` para `IdentityDbContext`, configurar o esquema bearer,
+   `UseAuthentication` e `UseAuthorization`, e criar uma migration nova para as
+   tabelas do Identity.
 2. `feat(auth): add login endpoint`: `POST /login` devolve o token para
    credenciais válidas e 401 para inválidas.
 3. `feat(auth): seed roles and initial admin idempotently`:
@@ -311,7 +310,8 @@ Casos negativos:
    - e-mail e senha vêm da configuração (`Seed:AdminEmail` e `Seed:AdminPassword`, via
      `dotnet user-secrets` ou variáveis `Seed__AdminEmail` e `Seed__AdminPassword`);
    - sem senha configurada, a aplicação falha com mensagem clara, sem logar o valor;
-   - aplicar migrations e rodar o seed na inicialização.
+   - rodar o seed no `Data/DatabaseInitializer.cs`, logo depois do
+     `MigrateAsync` (criado na I01).
 4. `docs: document admin secret configuration`: comandos `dotnet user-secrets init`
    e `set` no README.
 5. Adicionar ao `ExpenseHub.Api.http` requisições de login válido e inválido, rota
@@ -333,7 +333,7 @@ Casos negativos:
 - usuário sem role não faz operação privilegiada;
 - segredo não aparece em commit ou log.
 
-### Etapa 3a — I03 Cadastro e roles · **Gustavo** · branch `i03-user-roles`
+### Etapa 3 — I03 Cadastro e roles · **Gustavo** · branch `i03-user-roles`
 
 1. `feat(auth): add public registration endpoint`: `POST /register` com DTO só de
    `Email` (`[Required]`, `[EmailAddress]`) e `Password` (`[Required]`). Erros do
@@ -358,10 +358,7 @@ Casos negativos:
 - role arbitrária não é criada;
 - o Admin não remove a própria role Admin.
 
-### Etapa 3b — I04 Criar e editar rascunho · **Leonardo** · branch `i04-expense-draft`
-
-Pode começar junto com a I03. Para testar antes do merge da I03, atribua a role
-`Employee` manualmente no banco local.
+### Etapa 4 — I04 Criar e editar rascunho · **Gustavo** · branch `i04-expense-draft`
 
 1. `feat(expenses): add create and update request DTOs`:
    - `Description`: `[Required, StringLength(500, MinimumLength = 10)]`.
@@ -385,7 +382,7 @@ Casos negativos:
 - despesa fora de Draft não é editada;
 - os DTOs impedem mass assignment.
 
-### Etapa 4 — I05 Enviar, listar e consultar · **Gustavo** · branch `i05-submit-query`
+### Etapa 5 — I05 Enviar, listar e consultar · **Gustavo** · branch `i05-submit-query`
 
 1. `feat(expenses): submit draft expenses`: `Expense.Submit` (Draft → Submitted,
    com histórico) e `POST /api/expenses/{id}/submit`, só para o proprietário.
@@ -405,7 +402,7 @@ Casos negativos:
 - Auditor não escreve;
 - Admin não ganha acesso funcional.
 
-### Etapa 5 — I06 Ownership e matriz de acesso · **Leonardo** · branch `i06-ownership-access`
+### Etapa 6 — I06 Ownership e matriz de acesso · **Leonardo** · branch `i06-ownership-access`
 
 1. Revisar rota por rota contra [MATRIZ-AUTORIZACAO](MATRIZ-AUTORIZACAO.md):
    - o atributo de role está correto no controller;
@@ -432,7 +429,7 @@ Critérios de aceite:
 - decisões contextuais no serviço;
 - 401, 403 e 404 corretos.
 
-### Etapa 6 — I07 Aprovar e reprovar · **Gustavo** · branch `i07-approve-reject`
+### Etapa 7 — I07 Aprovar e reprovar · **Leonardo** · branch `i07-approve-reject`
 
 1. `feat(expenses): approve submitted expenses`: `Expense.Approve(actorId, now)`
    (Submitted → Approved, com histórico) e `POST /api/expenses/{id}/approve` com
@@ -451,7 +448,7 @@ Casos negativos:
 - justificativa vazia, curta ou longa é rejeitada;
 - Approved, Rejected e Paid não recebem nova decisão (409 sem histórico duplicado).
 
-### Etapa 7 — I08 Pagamento e histórico · **Leonardo** · branch `i08-payment-history`
+### Etapa 8 — I08 Pagamento e histórico · **Leonardo** · branch `i08-payment-history`
 
 1. `feat(expenses): pay approved expenses`: `Expense.Pay(actorId, now)`
    (Approved → Paid) cria o `PaymentRecord` com ator e horário do servidor.
@@ -471,14 +468,12 @@ Casos negativos:
 - Auditor consulta, mas não altera;
 - falha de persistência não deixa estado e histórico divergentes.
 
-### Etapa 8 — I09 Testes unitários · **Ambos** · branch `i09-unit-tests`
+### Etapa 9 — I09 Testes unitários · **Leonardo** · branch `i09-unit-tests`
 
-Cada um já escreveu testes nas próprias features. Aqui fechem as lacunas:
-
-- **Gustavo**: estados e transições válidas e inválidas, aprovação, reprovação,
-  justificativa e validações de DTO.
-- **Leonardo**: ownership, autoaprovação, autopagamento, filtros por perfil,
-  pagamento e histórico.
+O Gustavo entrega testes das regras das issues I03 a I05 (cadastro, roles,
+validações de rascunho, envio e visibilidade). Aqui o Leonardo fecha as
+lacunas: estados e transições, ownership, autoaprovação, autopagamento,
+aprovação, reprovação, justificativa, pagamento e histórico.
 
 Regras:
 
@@ -492,10 +487,10 @@ Regras:
 Pontuação: estados 2%, ownership 3%, decisões e pagamento 2%, histórico e
 validações 1%, isolamento e valor contra regressão 2%.
 
-### Etapa 9 — I10 Qualidade e entrega · **Ambos** · branch `i10-code-quality`
+### Etapa 10 — I10 Qualidade e entrega · **Leonardo** · branch `i10-code-quality`
 
 1. Baixar o artefato `code-quality-report` do último run (o `report.md` é o mais
-   fácil de ler). Cada um zera os findings do código que escreveu.
+   fácil de ler). Zerar todos os findings.
 2. `dotnet restore`, `dotnet build` e `dotnet test` sem erros e **sem warnings**.
 3. README final:
    - provider e pacote;
