@@ -186,6 +186,20 @@ sources/ExpenseHub.Api/
 - `PaymentRecord`: `Id`, `ExpenseId` (único), `PaidById`, `PaidAtUtc`, `Amount`.
 - **Um reembolso tem um único valor.** Nada de coleção de itens.
 
+### Padrão já implementado (I04) — siga nas próximas issues
+
+- As regras ficam em métodos da entidade `Expense` (`CreateDraft`, `UpdateDraft`).
+  Cada método valida dono e estado, altera os campos, troca o `Version` e chama
+  `AddHistory`. Os testes unitários chamam esses métodos direto, sem banco.
+- O `ExpenseService` carrega a despesa, chama o método da entidade e salva com
+  `SaveAsync` (um único `SaveChangesAsync`, com `DbUpdateConcurrencyException`
+  convertido em 409).
+- O id do usuário vem de `userManager.GetUserId(principal)` (veja `ExpenseEndpoints.GetUserId`).
+- A hora vem do `TimeProvider` injetado (`UtcNow()` no serviço).
+- **Não atribua `Id` a entidades novas adicionadas por navegação** (ex.: `History.Add(...)`
+  ou o futuro `PaymentRecord`). O EF acha que elas já existem, faz `UPDATE` em vez
+  de `INSERT` e a operação falha com 409. Deixe o EF gerar o `Id`.
+
 ### Regras de transição (no domínio)
 
 | Estado atual | Ação | Quem | Próximo |

@@ -102,3 +102,67 @@ Content-Type: application/json
 {
   "roles": ["Employee"]
 }
+
+###
+
+# Cole aqui o accessToken de um usuário com a role Employee
+@employeeToken = <accessToken do Employee>
+
+# I04 - criar rascunho: 201, estado Draft, proprietário obtido do token
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "description": "Almoço com cliente",
+  "amount": 120.50,
+  "expenseDate": "2026-09-30",
+  "categoryId": 1
+}
+
+###
+
+# I04 - campos controlados pelo servidor são ignorados: continua Draft e do próprio usuário
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "description": "Almoço com cliente",
+  "amount": 120.50,
+  "expenseDate": "2026-09-30",
+  "categoryId": 1,
+  "ownerId": "outro-usuario",
+  "status": "Paid"
+}
+
+###
+
+# I04 - valor fora do limite, descrição curta e data futura: 400
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "description": "curta",
+  "amount": 0,
+  "expenseDate": "2099-01-01",
+  "categoryId": 1
+}
+
+###
+
+# Cole aqui o id retornado na criação
+@expenseId = <id do reembolso>
+
+# I04 - editar rascunho próprio: 200 (outro usuário: 404; fora de Draft: 409)
+PUT {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "description": "Almoço com cliente e equipe",
+  "amount": 180.00,
+  "expenseDate": "2026-09-30",
+  "categoryId": 1
+}

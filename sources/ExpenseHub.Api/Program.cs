@@ -37,7 +37,9 @@ internal static class Program
             .AddBearerToken(IdentityConstants.BearerScheme);
         builder.Services.AddAuthorization();
 
+        builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddScoped<UserAdminService>();
+        builder.Services.AddScoped<ExpenseService>();
 
         WebApplication app = builder.Build();
 
@@ -59,6 +61,7 @@ internal static class Program
             .WithName("GetHealth");
         app.MapAuthEndpoints();
         app.MapAdminUserEndpoints();
+        app.MapExpenseEndpoints();
 
         await app.RunAsync();
     }
