@@ -153,6 +153,26 @@ internal sealed class Expense
         AddHistory(ExpenseAction.Rejected, actorId, nowUtc, ExpenseStatus.Submitted, justification: justification);
     }
 
+    public void Pay(string actorId, DateTime nowUtc)
+    {
+        EnsureCanAct(actorId, ExpenseStatus.Approved, "Somente reembolsos em Approved podem ser pagos.");
+
+        Status = ExpenseStatus.Paid;
+        UpdatedAtUtc = nowUtc;
+        Version = Guid.NewGuid();
+
+        // Sem Id: o EF gera a chave e trata o registro como novo (INSERT).
+        Payment = new PaymentRecord
+        {
+            ExpenseId = Id,
+            PaidById = actorId,
+            PaidAtUtc = nowUtc,
+            Amount = Amount,
+        };
+
+        AddHistory(ExpenseAction.Paid, actorId, nowUtc, ExpenseStatus.Approved);
+    }
+
     private static void EnsureNotFuture(DateOnly expenseDate, DateTime nowUtc)
     {
         if (expenseDate > DateOnly.FromDateTime(nowUtc))
@@ -161,7 +181,7 @@ internal sealed class Expense
         }
     }
 
-    // Ordem do contrato: rascunho fica oculto (404), proprietário não decide (403), estado errado é conflito (409).
+    // Ordem do contrato: rascunho fica oculto (404), proprietário não decide nem paga (403), estado errado é conflito (409).
     private void EnsureCanAct(string actorId, ExpenseStatus requiredStatus, string conflictMessage)
     {
         if (Status == ExpenseStatus.Draft)
@@ -171,7 +191,7 @@ internal sealed class Expense
 
         if (actorId == OwnerId)
         {
-            throw AppException.Forbidden("O proprietário não pode decidir sobre o próprio reembolso.");
+            throw AppException.Forbidden("O proprietário não pode aprovar, reprovar ou pagar o próprio reembolso.");
         }
 
         if (Status != requiredStatus)

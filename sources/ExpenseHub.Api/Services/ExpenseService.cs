@@ -97,6 +97,28 @@ internal sealed class ExpenseService
     public Task<ExpenseResponse> RejectAsync(string userId, Guid id, RejectExpenseRequest request, CancellationToken cancellationToken)
         => DecideAsync(id, expense => expense.Reject(userId, request.Justification, UtcNow()), cancellationToken);
 
+    public Task<ExpenseResponse> PayAsync(string userId, Guid id, CancellationToken cancellationToken)
+        => DecideAsync(id, expense => expense.Pay(userId, UtcNow()), cancellationToken);
+
+    public async Task<IReadOnlyList<ExpenseHistoryResponse>> GetHistoryAsync(string userId, IReadOnlyCollection<string> roles, Guid id, CancellationToken cancellationToken)
+    {
+        List<ExpenseHistory> history = await _context.Expenses
+            .AsNoTracking()
+            .Where(ExpenseAccessPolicy.VisibleTo(userId, roles))
+            .Where(expense => expense.Id == id)
+            .SelectMany(expense => expense.History)
+            .OrderBy(entry => entry.OccurredAtUtc)
+            .ToListAsync(cancellationToken);
+
+        // Todo reembolso tem ao menos o registro Created; lista vazia significa inexistente ou fora do escopo.
+        if (history.Count == 0)
+        {
+            throw AppException.NotFound("Reembolso não encontrado.");
+        }
+
+        return history.Select(ExpenseHistoryResponse.From).ToList();
+    }
+
     private async Task<ExpenseResponse> DecideAsync(Guid id, Action<Expense> decision, CancellationToken cancellationToken)
     {
         Expense expense = await _context.Expenses.FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
