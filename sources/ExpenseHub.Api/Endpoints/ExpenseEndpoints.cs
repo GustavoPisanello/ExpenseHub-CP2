@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,6 +29,15 @@ internal static class ExpenseEndpoints
         group.MapPut("/{id:guid}", UpdateAsync)
             .RequireAuthorization(policy => policy.RequireRole(Roles.Employee))
             .AddEndpointFilter<ValidationFilter<ExpenseRequest>>();
+
+        group.MapGet("/", ListAsync)
+            .RequireAuthorization(policy => policy.RequireRole(Roles.Employee, Roles.Approver, Roles.Finance, Roles.Auditor));
+
+        group.MapGet("/{id:guid}", GetAsync)
+            .RequireAuthorization(policy => policy.RequireRole(Roles.Employee, Roles.Approver, Roles.Finance, Roles.Auditor));
+
+        group.MapPost("/{id:guid}/submit", SubmitAsync)
+            .RequireAuthorization(policy => policy.RequireRole(Roles.Employee));
     }
 
     private static async Task<IResult> CreateAsync(
@@ -51,6 +62,41 @@ internal static class ExpenseEndpoints
         ExpenseResponse expense = await service.UpdateAsync(GetUserId(principal, userManager), id, request, cancellationToken);
         return Results.Ok(expense);
     }
+
+    private static async Task<IResult> ListAsync(
+        ClaimsPrincipal principal,
+        UserManager<IdentityUser> userManager,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<ExpenseResponse> expenses = await service.ListAsync(GetUserId(principal, userManager), GetRoles(principal), cancellationToken);
+        return Results.Ok(expenses);
+    }
+
+    private static async Task<IResult> GetAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        UserManager<IdentityUser> userManager,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        ExpenseResponse expense = await service.GetAsync(GetUserId(principal, userManager), GetRoles(principal), id, cancellationToken);
+        return Results.Ok(expense);
+    }
+
+    private static async Task<IResult> SubmitAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        UserManager<IdentityUser> userManager,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        ExpenseResponse expense = await service.SubmitAsync(GetUserId(principal, userManager), id, cancellationToken);
+        return Results.Ok(expense);
+    }
+
+    private static List<string> GetRoles(ClaimsPrincipal principal)
+        => Roles.All.Where(principal.IsInRole).ToList();
 
     private static string GetUserId(ClaimsPrincipal principal, UserManager<IdentityUser> userManager)
         => userManager.GetUserId(principal) ?? throw new InvalidOperationException("Usuário autenticado sem identificador.");

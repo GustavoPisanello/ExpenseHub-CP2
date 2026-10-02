@@ -166,3 +166,22 @@ Content-Type: application/json
   "expenseDate": "2026-09-30",
   "categoryId": 1
 }
+
+###
+
+# I05 - enviar rascunho próprio: 200 (repetido ou fora de Draft: 409; de outro usuário: 404)
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/submit
+Authorization: Bearer {{employeeToken}}
+
+###
+
+# I05 - listar conforme o perfil do token:
+# Employee: próprios | Approver: Submitted | Finance: Approved e Paid | Auditor: todos | Admin puro: 403
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{employeeToken}}
+
+###
+
+# I05 - detalhe: 200 se visível para o perfil; 404 se inexistente ou fora do escopo
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}
+Authorization: Bearer {{employeeToken}}

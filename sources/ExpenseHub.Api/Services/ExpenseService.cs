@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Contracts;
@@ -53,6 +55,39 @@ internal sealed class ExpenseService
             request.CategoryId.GetValueOrDefault(),
             UtcNow());
 
+        await SaveAsync(cancellationToken);
+
+        return ExpenseResponse.From(expense);
+    }
+
+    public async Task<IReadOnlyList<ExpenseResponse>> ListAsync(string userId, IReadOnlyCollection<string> roles, CancellationToken cancellationToken)
+    {
+        List<Expense> expenses = await _context.Expenses
+            .AsNoTracking()
+            .Where(ExpenseAccessPolicy.VisibleTo(userId, roles))
+            .OrderByDescending(expense => expense.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+
+        return expenses.Select(ExpenseResponse.From).ToList();
+    }
+
+    public async Task<ExpenseResponse> GetAsync(string userId, IReadOnlyCollection<string> roles, Guid id, CancellationToken cancellationToken)
+    {
+        Expense expense = await _context.Expenses
+            .AsNoTracking()
+            .Where(ExpenseAccessPolicy.VisibleTo(userId, roles))
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
+            ?? throw AppException.NotFound("Reembolso não encontrado.");
+
+        return ExpenseResponse.From(expense);
+    }
+
+    public async Task<ExpenseResponse> SubmitAsync(string userId, Guid id, CancellationToken cancellationToken)
+    {
+        Expense expense = await _context.Expenses.FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
+            ?? throw AppException.NotFound("Reembolso não encontrado.");
+
+        expense.Submit(userId, UtcNow());
         await SaveAsync(cancellationToken);
 
         return ExpenseResponse.From(expense);

@@ -21,6 +21,23 @@ Em caso de divergência, valem os documentos oficiais:
 
 ---
 
+## 0. Passagem para o Leonardo (I01–I05 concluídas)
+
+O que já existe e deve ser reaproveitado nas issues I06 a I10:
+
+| Peça | Onde | Para quê |
+|---|---|---|
+| Regras do reembolso | `Models/Expense.cs` (`CreateDraft`, `UpdateDraft`, `Submit`, `AddHistory`) | Modelo para `Approve`, `Reject` e `Pay` |
+| Visibilidade | `Services/ExpenseAccessPolicy.VisibleTo(userId, roles)` | Filtro do `GET` e do histórico (I08) |
+| Serviço | `Services/ExpenseService.cs` (`SaveAsync`, `UtcNow`) | Carregar, chamar a regra e salvar uma vez |
+| Rotas | `Endpoints/ExpenseEndpoints.cs` (`GetUserId`, `GetRoles`) | Novas rotas de approve, reject, pay e history |
+| Erros | `AppException.BadRequest/Forbidden/NotFound/Conflict` | Respostas 400/403/404/409 em ProblemDetails |
+| Validação | `ValidationFilter<T>` + Data Annotations no DTO | Corpo inválido → 400 |
+| Testes | `ExpenseHub.UnitTests/Domain`, `Services`, `Validation` | 56 testes; siga o mesmo estilo |
+
+Para o escopo de aprovar, reprovar e pagar, siga a seção "Ordem das checagens":
+rascunho alheio → 404; proprietário → 403; estado errado ou repetição → 409.
+
 ## 1. Visão geral da nota
 
 | Issue | Conteúdo | Peso | Depende de | Responsável |

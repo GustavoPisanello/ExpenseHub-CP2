@@ -185,6 +185,29 @@ Corpo das duas rotas:
 - Editar reembolso de outro usuário ou inexistente: `404`. Editar reembolso próprio fora de `Draft`: `409`.
 - A criação grava o histórico `Created`, e cada edição grava `Updated` com os campos alterados, na mesma operação.
 
+### Enviar, listar e consultar
+
+| Rota | Roles | Descrição |
+|---|---|---|
+| `POST /api/expenses/{id}/submit` | Employee | Envia um rascunho próprio: `Draft` → `Submitted` |
+| `GET /api/expenses` | Employee, Approver, Finance, Auditor | Lista os reembolsos visíveis para o perfil |
+| `GET /api/expenses/{id}` | Employee, Approver, Finance, Auditor | Detalhe de um reembolso visível |
+
+Visibilidade por role (com várias roles, vale a união):
+
+| Role | Vê |
+|---|---|
+| Employee | Os próprios reembolsos, em qualquer estado |
+| Approver | Reembolsos `Submitted` |
+| Finance | Reembolsos `Approved` e `Paid` |
+| Auditor | Todos |
+| Admin | Nenhum (`403`, a menos que também tenha outra role) |
+
+- O filtro é aplicado na consulta ao banco, antes de carregar os dados.
+- Reembolso inexistente ou fora da visibilidade retorna `404`, sem revelar se ele existe.
+- Enviar reembolso de outro usuário: `404`. Enviar de novo ou fora de `Draft`: `409`, sem duplicar histórico.
+- O envio grava o histórico `Submitted` (`Draft` → `Submitted`) na mesma operação.
+
 ## Swagger
 
 Em ambiente de desenvolvimento, a interface do Swagger fica em `http://localhost:5245/swagger`.

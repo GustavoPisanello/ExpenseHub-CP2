@@ -106,6 +106,25 @@ internal sealed class Expense
         AddHistory(ExpenseAction.Updated, actorId, nowUtc, ExpenseStatus.Draft, string.Join("; ", changes));
     }
 
+    public void Submit(string actorId, DateTime nowUtc)
+    {
+        if (actorId != OwnerId)
+        {
+            throw AppException.NotFound("Reembolso não encontrado.");
+        }
+
+        if (Status != ExpenseStatus.Draft)
+        {
+            throw AppException.Conflict("Somente reembolsos em Draft podem ser enviados.");
+        }
+
+        Status = ExpenseStatus.Submitted;
+        UpdatedAtUtc = nowUtc;
+        Version = Guid.NewGuid();
+
+        AddHistory(ExpenseAction.Submitted, actorId, nowUtc, ExpenseStatus.Draft);
+    }
+
     private static void EnsureNotFuture(DateOnly expenseDate, DateTime nowUtc)
     {
         if (expenseDate > DateOnly.FromDateTime(nowUtc))
