@@ -185,3 +185,106 @@ Authorization: Bearer {{employeeToken}}
 # I05 - detalhe: 200 se visível para o perfil; 404 se inexistente ou fora do escopo
 GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}
 Authorization: Bearer {{employeeToken}}
+
+###
+
+# I06 - matriz de acesso com várias identidades.
+# Preparação: cadastre os usuários em /register, atribua as roles como Admin
+# (PUT /api/admin/users/{id}/roles) e faça login de novo com cada um.
+# {{employeeToken}} é o Employee A, dono de {{expenseId}}.
+@employeeBToken = <accessToken do Employee B>
+@approverToken = <accessToken do Approver>
+@financeToken = <accessToken do Finance>
+@auditorToken = <accessToken do Auditor>
+@noRoleToken = <accessToken de usuário sem role>
+
+# I06 - sem token: 401
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses
+
+###
+
+# I06 - autenticado sem role: 403
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{noRoleToken}}
+
+###
+
+# I06 - Admin sem outra role não tem acesso funcional: 403
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{adminToken}}
+
+###
+
+# I06 - Employee B lista: só os próprios, nunca os do Employee A
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{employeeBToken}}
+
+###
+
+# I06 - Employee B trocando o id na URL para o reembolso do Employee A: 404
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}
+Authorization: Bearer {{employeeBToken}}
+
+###
+
+# I06 - Employee B editando o reembolso do Employee A: 404 (mesmo com categoria inválida)
+PUT {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}
+Authorization: Bearer {{employeeBToken}}
+Content-Type: application/json
+
+{
+  "description": "Tentativa de edição alheia",
+  "amount": 1.00,
+  "expenseDate": "2026-09-30",
+  "categoryId": 9999
+}
+
+###
+
+# I06 - Employee B enviando o reembolso do Employee A: 404
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/submit
+Authorization: Bearer {{employeeBToken}}
+
+###
+
+# I06 - Approver lista: somente Submitted (Draft alheio: 404 no detalhe)
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{approverToken}}
+
+###
+
+# I06 - Approver sem Employee não cria reembolso: 403
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{approverToken}}
+Content-Type: application/json
+
+{
+  "description": "Approver tentando criar",
+  "amount": 10.00,
+  "expenseDate": "2026-09-30",
+  "categoryId": 1
+}
+
+###
+
+# I06 - Finance lista: somente Approved e Paid
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{financeToken}}
+
+###
+
+# I06 - Finance consultando reembolso Draft ou Submitted: 404
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}
+Authorization: Bearer {{financeToken}}
+
+###
+
+# I06 - Auditor lista: todos
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{auditorToken}}
+
+###
+
+# I06 - Auditor não escreve: 403
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/submit
+Authorization: Bearer {{auditorToken}}
