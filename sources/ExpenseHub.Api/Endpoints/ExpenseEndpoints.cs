@@ -38,6 +38,13 @@ internal static class ExpenseEndpoints
 
         group.MapPost("/{id:guid}/submit", SubmitAsync)
             .RequireAuthorization(policy => policy.RequireRole(Roles.Employee));
+
+        group.MapPost("/{id:guid}/approve", ApproveAsync)
+            .RequireAuthorization(policy => policy.RequireRole(Roles.Approver));
+
+        group.MapPost("/{id:guid}/reject", RejectAsync)
+            .RequireAuthorization(policy => policy.RequireRole(Roles.Approver))
+            .AddEndpointFilter<ValidationFilter<RejectExpenseRequest>>();
     }
 
     private static async Task<IResult> CreateAsync(
@@ -92,6 +99,29 @@ internal static class ExpenseEndpoints
         CancellationToken cancellationToken)
     {
         ExpenseResponse expense = await service.SubmitAsync(GetUserId(principal, userManager), id, cancellationToken);
+        return Results.Ok(expense);
+    }
+
+    private static async Task<IResult> ApproveAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        UserManager<IdentityUser> userManager,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        ExpenseResponse expense = await service.ApproveAsync(GetUserId(principal, userManager), id, cancellationToken);
+        return Results.Ok(expense);
+    }
+
+    private static async Task<IResult> RejectAsync(
+        Guid id,
+        RejectExpenseRequest request,
+        ClaimsPrincipal principal,
+        UserManager<IdentityUser> userManager,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        ExpenseResponse expense = await service.RejectAsync(GetUserId(principal, userManager), id, request, cancellationToken);
         return Results.Ok(expense);
     }
 
