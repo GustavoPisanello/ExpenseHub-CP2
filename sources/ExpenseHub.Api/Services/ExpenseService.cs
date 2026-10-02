@@ -42,8 +42,7 @@ internal sealed class ExpenseService
 
     public async Task<ExpenseResponse> UpdateAsync(string userId, Guid id, ExpenseRequest request, CancellationToken cancellationToken)
     {
-        Expense expense = await _context.Expenses.FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
-            ?? throw AppException.NotFound("Reembolso não encontrado.");
+        Expense expense = await FindOwnedAsync(userId, id, cancellationToken);
 
         await EnsureCategoryExistsAsync(request.CategoryId.GetValueOrDefault(), cancellationToken);
 
@@ -84,13 +83,20 @@ internal sealed class ExpenseService
 
     public async Task<ExpenseResponse> SubmitAsync(string userId, Guid id, CancellationToken cancellationToken)
     {
-        Expense expense = await _context.Expenses.FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
-            ?? throw AppException.NotFound("Reembolso não encontrado.");
+        Expense expense = await FindOwnedAsync(userId, id, cancellationToken);
 
         expense.Submit(userId, UtcNow());
         await SaveAsync(cancellationToken);
 
         return ExpenseResponse.From(expense);
+    }
+
+    private async Task<Expense> FindOwnedAsync(string userId, Guid id, CancellationToken cancellationToken)
+    {
+        return await _context.Expenses
+            .Where(ExpenseAccessPolicy.OwnedBy(userId))
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
+            ?? throw AppException.NotFound("Reembolso não encontrado.");
     }
 
     private async Task EnsureCategoryExistsAsync(int categoryId, CancellationToken cancellationToken)

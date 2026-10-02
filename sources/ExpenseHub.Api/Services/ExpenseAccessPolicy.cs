@@ -22,4 +22,7 @@ internal static class ExpenseAccessPolicy
             || (isApprover && expense.Status == ExpenseStatus.Submitted)
             || (isFinance && (expense.Status == ExpenseStatus.Approved || expense.Status == ExpenseStatus.Paid));
     }
+
+    public static Expression<Func<Expense, bool>> OwnedBy(string userId)
+        => expense => expense.OwnerId == userId;
 }
