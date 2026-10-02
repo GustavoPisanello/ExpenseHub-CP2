@@ -133,6 +133,31 @@ A API usa ASP.NET Core Identity com tokens bearer.
 
 As requisições de exemplo estão em `sources/ExpenseHub.Api/ExpenseHub.Api.http`.
 
+## Usuários e roles
+
+### Cadastro
+
+`POST /register` é público e recebe somente `email` e `password`. O usuário é criado **sem nenhuma role**; um campo `roles` enviado pelo cliente é ignorado. E-mail duplicado, e-mail inválido ou senha fora da política retornam `400`.
+
+### Administração (somente Admin)
+
+| Rota | Descrição |
+|---|---|
+| `GET /api/admin/users` | Lista usuários com suas roles |
+| `PUT /api/admin/users/{id}/roles` | Substitui o conjunto de roles do usuário. Corpo: `{ "roles": ["Employee", "Approver"] }` |
+
+Regras do `PUT`:
+
+- aceita apenas `Admin`, `Employee`, `Approver`, `Finance` e `Auditor` (sem diferenciar maiúsculas); qualquer outra role retorna `400` e nenhuma role nova é criada;
+- `"roles": []` remove todas as roles; omitir o campo retorna `400`;
+- o Admin não pode remover a própria role Admin (`400`);
+- usuário inexistente retorna `404`;
+- sem token retorna `401`; usuário sem a role Admin retorna `403`.
+
+### Novo login após alterar roles
+
+**Depois de uma alteração de roles, o usuário precisa fazer login novamente.** As roles ficam gravadas no token no momento do login, então o token antigo continua com as roles antigas até expirar (1 hora). O novo login emite um token com as roles atualizadas.
+
 ## Swagger
 
 Em ambiente de desenvolvimento, a interface do Swagger fica em `http://localhost:5245/swagger`.
