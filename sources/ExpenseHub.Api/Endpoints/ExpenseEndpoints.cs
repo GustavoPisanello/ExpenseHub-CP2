@@ -45,6 +45,12 @@ internal static class ExpenseEndpoints
         group.MapPost("/{id:guid}/reject", RejectAsync)
             .RequireAuthorization(policy => policy.RequireRole(Roles.Approver))
             .AddEndpointFilter<ValidationFilter<RejectExpenseRequest>>();
+
+        group.MapPost("/{id:guid}/pay", PayAsync)
+            .RequireAuthorization(policy => policy.RequireRole(Roles.Finance));
+
+        group.MapGet("/{id:guid}/history", GetHistoryAsync)
+            .RequireAuthorization(policy => policy.RequireRole(Roles.Employee, Roles.Approver, Roles.Finance, Roles.Auditor));
     }
 
     private static async Task<IResult> CreateAsync(
@@ -123,6 +129,28 @@ internal static class ExpenseEndpoints
     {
         ExpenseResponse expense = await service.RejectAsync(GetUserId(principal, userManager), id, request, cancellationToken);
         return Results.Ok(expense);
+    }
+
+    private static async Task<IResult> PayAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        UserManager<IdentityUser> userManager,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        ExpenseResponse expense = await service.PayAsync(GetUserId(principal, userManager), id, cancellationToken);
+        return Results.Ok(expense);
+    }
+
+    private static async Task<IResult> GetHistoryAsync(
+        Guid id,
+        ClaimsPrincipal principal,
+        UserManager<IdentityUser> userManager,
+        ExpenseService service,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<ExpenseHistoryResponse> history = await service.GetHistoryAsync(GetUserId(principal, userManager), GetRoles(principal), id, cancellationToken);
+        return Results.Ok(history);
     }
 
     private static List<string> GetRoles(ClaimsPrincipal principal)
