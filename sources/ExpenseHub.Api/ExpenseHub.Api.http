@@ -338,3 +338,36 @@ Content-Type: application/json
 {
   "justification": "Tentativa de reprovar o próprio reembolso."
 }
+
+###
+
+# I08 - pagar reembolso Approved de outro usuário: 200, estado Paid
+# (Draft: 404; Submitted, Rejected ou já Paid: 409; proprietário: 403; sem role Finance: 403)
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/pay
+Authorization: Bearer {{financeToken}}
+
+###
+
+# I08 - pagamento repetido: 409, sem novo histórico nem novo registro de pagamento
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/pay
+Authorization: Bearer {{financeToken}}
+
+###
+
+# I08 - histórico em ordem cronológica, com a mesma visibilidade do reembolso:
+# Employee: próprio | Approver: Submitted | Finance: Approved e Paid | Auditor: todos
+# Fora do escopo ou inexistente: 404 | Admin puro: 403
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/history
+Authorization: Bearer {{employeeToken}}
+
+###
+
+# I08 - Auditor consulta o histórico de qualquer reembolso: 200
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/history
+Authorization: Bearer {{auditorToken}}
+
+###
+
+# I08 - Auditor não paga: 403
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/pay
+Authorization: Bearer {{auditorToken}}
