@@ -34,3 +34,71 @@ POST {{ExpenseHub_Api_HostAddress}}/login
 Content-Type: application/json
 
 {}
+
+###
+
+# I03 - cadastro público: 201, usuário criado sem nenhuma role
+POST {{ExpenseHub_Api_HostAddress}}/register
+Content-Type: application/json
+
+{
+  "email": "ana@empresa.com",
+  "password": "Senha#123"
+}
+
+###
+
+# I03 - role enviada no cadastro é ignorada: usuário continua sem roles
+POST {{ExpenseHub_Api_HostAddress}}/register
+Content-Type: application/json
+
+{
+  "email": "bia@empresa.com",
+  "password": "Senha#123",
+  "roles": ["Admin"]
+}
+
+###
+
+# Cole aqui o accessToken retornado pelo login do Admin
+@adminToken = <accessToken do Admin>
+
+# I03 - listar usuários: 200 como Admin, 401 sem token, 403 sem a role Admin
+GET {{ExpenseHub_Api_HostAddress}}/api/admin/users
+Authorization: Bearer {{adminToken}}
+
+###
+
+# Cole aqui o id de um usuário retornado pela listagem
+@userId = <id do usuário>
+
+# I03 - substituir as roles do usuário: 200
+PUT {{ExpenseHub_Api_HostAddress}}/api/admin/users/{{userId}}/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "roles": ["Employee", "Approver"]
+}
+
+###
+
+# I03 - role desconhecida: 400
+PUT {{ExpenseHub_Api_HostAddress}}/api/admin/users/{{userId}}/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "roles": ["SuperUser"]
+}
+
+###
+
+# I03 - usuário inexistente: 404
+PUT {{ExpenseHub_Api_HostAddress}}/api/admin/users/nao-existe/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "roles": ["Employee"]
+}

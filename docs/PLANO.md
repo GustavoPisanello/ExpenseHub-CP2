@@ -123,6 +123,9 @@ Higiene, Estilo, Boas práticas) vale 20 pontos, e cada regra desconta uma vez.
    `password`, `pwd`, `senha`, `secret`, `token`, `apikey` ou `connectionstring` pode
    ter valor preenchido.
    - A senha do Admin vem de `dotnet user-secrets` ou de variável de ambiente.
+   - **Vale também para testes:** `Password = "Abc#123"` num `.cs` é bloqueante no CI.
+     Use uma constante cujo nome não contenha essas palavras, por exemplo
+     `private const string ValidCredential = "Abc#12345";` e `Password = ValidCredential`.
    - Connection string do SQLite no formato aninhado:
 
      ```json
@@ -148,9 +151,9 @@ Higiene, Estilo, Boas práticas) vale 20 pontos, e cada regra desconta uma vez.
 | Autenticação | Bearer token do Identity: `AddAuthentication(IdentityConstants.BearerScheme).AddBearerToken(IdentityConstants.BearerScheme)`. Não precisa de chave JWT para esconder |
 | `/register` e `/login` | Escritos por nós, com `UserManager` e `SignInManager`. **Não** usar `MapIdentityApi`, que expõe rotas extras fora do contrato |
 | API | Minimal APIs em classes `internal static` dentro de `Endpoints/`. A validação usa `ValidationFilter<T>` (Data Annotations com resposta 400), porque o gerador de validação do .NET 10 ignora DTOs `internal` |
-| Erros | `AddProblemDetails()` + tratamento de exceções de domínio convertendo para 400, 403, 404 e 409 |
+| Erros | Lance `AppException.BadRequest`, `.Forbidden`, `.NotFound` ou `.Conflict` (em `Services/AppException.cs`). O `AppExceptionHandler` converte em ProblemDetails com o status certo |
 | Relógio | `TimeProvider` injetado, para os testes controlarem a hora |
-| Testes | MSTest, **sem banco**. Testar domínio, policy de acesso e serviços com fakes |
+| Testes | MSTest, **sem banco**. Classes de teste `internal sealed` (o `[assembly: DiscoverInternals]` já está em `MSTestSettings.cs`), sem XML doc. A API expõe os internals com `InternalsVisibleTo`. **Não crie pasta `Dto/` ou `Dtos/` no projeto de testes** (cai na regra FIAP3005) |
 
 ### Estrutura de pastas sugerida
 
