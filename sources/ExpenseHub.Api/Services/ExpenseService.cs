@@ -91,6 +91,23 @@ internal sealed class ExpenseService
         return ExpenseResponse.From(expense);
     }
 
+    public Task<ExpenseResponse> ApproveAsync(string userId, Guid id, CancellationToken cancellationToken)
+        => DecideAsync(id, expense => expense.Approve(userId, UtcNow()), cancellationToken);
+
+    public Task<ExpenseResponse> RejectAsync(string userId, Guid id, RejectExpenseRequest request, CancellationToken cancellationToken)
+        => DecideAsync(id, expense => expense.Reject(userId, request.Justification, UtcNow()), cancellationToken);
+
+    private async Task<ExpenseResponse> DecideAsync(Guid id, Action<Expense> decision, CancellationToken cancellationToken)
+    {
+        Expense expense = await _context.Expenses.FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
+            ?? throw AppException.NotFound("Reembolso não encontrado.");
+
+        decision(expense);
+        await SaveAsync(cancellationToken);
+
+        return ExpenseResponse.From(expense);
+    }
+
     private async Task<Expense> FindOwnedAsync(string userId, Guid id, CancellationToken cancellationToken)
     {
         return await _context.Expenses

@@ -125,6 +125,34 @@ internal sealed class Expense
         AddHistory(ExpenseAction.Submitted, actorId, nowUtc, ExpenseStatus.Draft);
     }
 
+    public void Approve(string actorId, DateTime nowUtc)
+    {
+        EnsureCanAct(actorId, ExpenseStatus.Submitted, "Somente reembolsos em Submitted podem ser aprovados.");
+
+        Status = ExpenseStatus.Approved;
+        UpdatedAtUtc = nowUtc;
+        Version = Guid.NewGuid();
+
+        AddHistory(ExpenseAction.Approved, actorId, nowUtc, ExpenseStatus.Submitted);
+    }
+
+    public void Reject(string actorId, string justification, DateTime nowUtc)
+    {
+        EnsureCanAct(actorId, ExpenseStatus.Submitted, "Somente reembolsos em Submitted podem ser reprovados.");
+
+        justification = justification.Trim();
+        if (justification.Length is < 10 or > 500)
+        {
+            throw AppException.BadRequest("A justificativa deve ter entre 10 e 500 caracteres.");
+        }
+
+        Status = ExpenseStatus.Rejected;
+        UpdatedAtUtc = nowUtc;
+        Version = Guid.NewGuid();
+
+        AddHistory(ExpenseAction.Rejected, actorId, nowUtc, ExpenseStatus.Submitted, justification: justification);
+    }
+
     private static void EnsureNotFuture(DateOnly expenseDate, DateTime nowUtc)
     {
         if (expenseDate > DateOnly.FromDateTime(nowUtc))
@@ -133,7 +161,26 @@ internal sealed class Expense
         }
     }
 
-    private void AddHistory(ExpenseAction action, string actorId, DateTime nowUtc, ExpenseStatus? fromStatus, string? changes = null)
+    // Ordem do contrato: rascunho fica oculto (404), proprietário não decide (403), estado errado é conflito (409).
+    private void EnsureCanAct(string actorId, ExpenseStatus requiredStatus, string conflictMessage)
+    {
+        if (Status == ExpenseStatus.Draft)
+        {
+            throw AppException.NotFound("Reembolso não encontrado.");
+        }
+
+        if (actorId == OwnerId)
+        {
+            throw AppException.Forbidden("O proprietário não pode decidir sobre o próprio reembolso.");
+        }
+
+        if (Status != requiredStatus)
+        {
+            throw AppException.Conflict(conflictMessage);
+        }
+    }
+
+    private void AddHistory(ExpenseAction action, string actorId, DateTime nowUtc, ExpenseStatus? fromStatus, string? changes = null, string? justification = null)
     {
         History.Add(new ExpenseHistory
         {
@@ -144,6 +191,7 @@ internal sealed class Expense
             FromStatus = fromStatus,
             ToStatus = Status,
             Changes = changes,
+            Justification = justification,
         });
     }
 }
