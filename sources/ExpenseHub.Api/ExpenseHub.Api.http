@@ -288,3 +288,53 @@ Authorization: Bearer {{auditorToken}}
 # I06 - Auditor não escreve: 403
 POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/submit
 Authorization: Bearer {{auditorToken}}
+
+###
+
+# I07 - aprovar reembolso Submitted de outro usuário: 200, estado Approved
+# (Draft: 404; repetição ou já decidido: 409; Employee, Finance, Auditor ou Admin: 403)
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/approve
+Authorization: Bearer {{approverToken}}
+
+###
+
+# I07 - reprovar com justificativa (10 a 500): 200, estado Rejected
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/reject
+Authorization: Bearer {{approverToken}}
+Content-Type: application/json
+
+{
+  "justification": "Comprovante ilegível e sem CNPJ."
+}
+
+###
+
+# I07 - justificativa curta, vazia ou ausente: 400
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/reject
+Authorization: Bearer {{approverToken}}
+Content-Type: application/json
+
+{
+  "justification": "curta"
+}
+
+###
+
+# Cole aqui o accessToken de um usuário com Employee + Approver, dono de {{ownExpenseId}} (Submitted)
+@employeeApproverToken = <accessToken do Employee + Approver>
+@ownExpenseId = <id de um reembolso Submitted do próprio usuário>
+
+# I07 - Approver não aprova o próprio reembolso: 403
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{ownExpenseId}}/approve
+Authorization: Bearer {{employeeApproverToken}}
+
+###
+
+# I07 - Approver não reprova o próprio reembolso: 403
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{ownExpenseId}}/reject
+Authorization: Bearer {{employeeApproverToken}}
+Content-Type: application/json
+
+{
+  "justification": "Tentativa de reprovar o próprio reembolso."
+}
