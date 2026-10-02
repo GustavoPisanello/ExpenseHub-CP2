@@ -1,3 +1,4 @@
+using System;
 using ExpenseHub.Api.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -19,6 +20,11 @@ internal sealed class AppDbContext : IdentityDbContext<IdentityUser>
     public DbSet<ExpenseHistory> ExpenseHistories => Set<ExpenseHistory>();
 
     public DbSet<PaymentRecord> PaymentRecords => Set<PaymentRecord>();
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

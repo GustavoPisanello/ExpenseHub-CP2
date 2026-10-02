@@ -158,6 +158,33 @@ Regras do `PUT`:
 
 **Depois de uma alteração de roles, o usuário precisa fazer login novamente.** As roles ficam gravadas no token no momento do login, então o token antigo continua com as roles antigas até expirar (1 hora). O novo login emite um token com as roles atualizadas.
 
+## Reembolsos
+
+### Criar e editar rascunho (role Employee)
+
+| Rota | Descrição |
+|---|---|
+| `POST /api/expenses` | Cria um reembolso em `Draft`. Retorna `201` com o recurso criado |
+| `PUT /api/expenses/{id}` | Edita um rascunho próprio. Retorna `200` |
+
+Corpo das duas rotas:
+
+```json
+{ "description": "Almoço com cliente", "amount": 120.50, "expenseDate": "2026-09-30", "categoryId": 1 }
+```
+
+| Campo | Regra |
+|---|---|
+| `description` | Obrigatória, de 10 a 500 caracteres |
+| `amount` | De `0.01` a `2147483647` |
+| `expenseDate` | Data válida (`AAAA-MM-DD`) e não futura |
+| `categoryId` | Categoria existente (1 a 5, criadas pela migration) |
+
+- Proprietário, estado, datas de sistema e identificador são definidos pelo servidor. Esses campos enviados pelo cliente são ignorados.
+- Sem token: `401`. Sem a role Employee: `403`, mesmo para Admin, Approver, Finance ou Auditor.
+- Editar reembolso de outro usuário ou inexistente: `404`. Editar reembolso próprio fora de `Draft`: `409`.
+- A criação grava o histórico `Created`, e cada edição grava `Updated` com os campos alterados, na mesma operação.
+
 ## Swagger
 
 Em ambiente de desenvolvimento, a interface do Swagger fica em `http://localhost:5245/swagger`.
