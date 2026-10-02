@@ -83,6 +83,78 @@ internal sealed class ExpenseAccessPolicyTests
         Assert.IsEmpty(Visible(Ana));
     }
 
+    [TestMethod]
+    public void VisibleTo_ApproverWithoutEmployee_DoesNotSeeOwnDraft()
+    {
+        CollectionAssert.DoesNotContain(Visible(Ana, Roles.Approver), "ana-draft");
+    }
+
+    [TestMethod]
+    public void VisibleTo_Approver_DoesNotSeeDraftApprovedRejectedOrPaid()
+    {
+        List<string> visible = Visible("carla", Roles.Approver);
+
+        CollectionAssert.DoesNotContain(visible, "bruno-draft");
+        CollectionAssert.DoesNotContain(visible, "bruno-approved");
+        CollectionAssert.DoesNotContain(visible, "bruno-rejected");
+        CollectionAssert.DoesNotContain(visible, "ana-paid");
+    }
+
+    [TestMethod]
+    public void VisibleTo_Finance_DoesNotSeeDraftSubmittedOrRejected()
+    {
+        List<string> visible = Visible("fabio", Roles.Finance);
+
+        CollectionAssert.DoesNotContain(visible, "ana-draft");
+        CollectionAssert.DoesNotContain(visible, "bruno-submitted");
+        CollectionAssert.DoesNotContain(visible, "bruno-rejected");
+    }
+
+    [TestMethod]
+    public void VisibleTo_EmployeeAndFinance_SeesOwnExpensesPlusApprovedAndPaid()
+    {
+        CollectionAssert.AreEquivalent(
+            new List<string> { "bruno-draft", "bruno-submitted", "bruno-approved", "bruno-rejected", "ana-paid" },
+            Visible(Bruno, Roles.Employee, Roles.Finance));
+    }
+
+    [TestMethod]
+    public void VisibleTo_AdminAndEmployee_SeesOnlyOwnExpenses()
+    {
+        CollectionAssert.AreEquivalent(
+            new List<string> { "ana-draft", "ana-submitted", "ana-paid" },
+            Visible(Ana, Roles.Admin, Roles.Employee));
+    }
+
+    [TestMethod]
+    public void VisibleTo_AllFunctionalRolesExceptAuditor_StillHidesOtherUsersDraftAndRejected()
+    {
+        List<string> visible = Visible(Ana, Roles.Employee, Roles.Approver, Roles.Finance);
+
+        CollectionAssert.DoesNotContain(visible, "bruno-draft");
+        CollectionAssert.DoesNotContain(visible, "bruno-rejected");
+    }
+
+    [TestMethod]
+    public void OwnedBy_ReturnsOnlyExpensesOfThatUserInAnyStatus()
+    {
+        CollectionAssert.AreEquivalent(
+            new List<string> { "bruno-draft", "bruno-submitted", "bruno-approved", "bruno-rejected" },
+            Owned(Bruno));
+    }
+
+    [TestMethod]
+    public void OwnedBy_UserWithoutExpenses_ReturnsNothing()
+    {
+        Assert.IsEmpty(Owned("carla"));
+    }
+
+    private static List<string> Owned(string userId)
+    {
+        Func<Expense, bool> filter = ExpenseAccessPolicy.OwnedBy(userId).Compile();
+        return _expenses.Where(filter).Select(expense => expense.Description).ToList();
+    }
+
     private static List<string> Visible(string userId, params string[] roles)
     {
         Func<Expense, bool> filter = ExpenseAccessPolicy.VisibleTo(userId, roles).Compile();
