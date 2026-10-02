@@ -208,6 +208,54 @@ Visibilidade por role (com várias roles, vale a união):
 - Enviar reembolso de outro usuário: `404`. Enviar de novo ou fora de `Draft`: `409`, sem duplicar histórico.
 - O envio grava o histórico `Submitted` (`Draft` → `Submitted`) na mesma operação.
 
+### Aprovar e reprovar (role Approver)
+
+| Rota | Descrição |
+|---|---|
+| `POST /api/expenses/{id}/approve` | `Submitted` → `Approved`. Sem corpo |
+| `POST /api/expenses/{id}/reject` | `Submitted` → `Rejected`. Corpo: `{ "justification": "..." }`, de 10 a 500 caracteres |
+
+- O Approver não decide o próprio reembolso: `403`, mesmo acumulando a role Employee.
+- Justificativa ausente, vazia, curta ou longa: `400`. Ela fica gravada no histórico.
+- `Rejected` é final: não há reenvio nem reabertura.
+
+### Pagar (role Finance)
+
+| Rota | Descrição |
+|---|---|
+| `POST /api/expenses/{id}/pay` | `Approved` → `Paid`. Sem corpo |
+
+- O pagamento registra quem pagou, o horário do servidor e o valor do reembolso.
+- O Finance não paga o próprio reembolso: `403`.
+- Estado, histórico e registro de pagamento são gravados na mesma operação.
+
+### Ordem das respostas em aprovar, reprovar e pagar
+
+1. Sem token: `401`.
+2. Sem a role da rota: `403`.
+3. Corpo inválido: `400`.
+4. Reembolso inexistente ou ainda em `Draft`: `404`.
+5. Proprietário tentando decidir ou pagar o próprio reembolso: `403`.
+6. Estado incompatível ou operação repetida: `409`, sem gravar histórico. Duas operações simultâneas sobre o mesmo reembolso também terminam em `409` para a segunda.
+
+### Histórico
+
+`GET /api/expenses/{id}/history` (Employee, Approver, Finance, Auditor) devolve os registros em ordem cronológica, com a mesma visibilidade do reembolso. Fora do escopo ou inexistente: `404`.
+
+Cada registro traz ação (`Created`, `Updated`, `Submitted`, `Approved`, `Rejected`, `Paid`), ator, instante em UTC, estado anterior, estado posterior, justificativa (na reprovação) e alterações (nas edições do rascunho).
+
+## Fluxo de exemplo
+
+As requisições estão em `sources/ExpenseHub.Api/ExpenseHub.Api.http`, na ordem abaixo.
+
+1. Faça login como Admin.
+2. Cadastre os usuários em `POST /register` e atribua as roles com `PUT /api/admin/users/{id}/roles`: um Employee, um Approver, um Finance e um Auditor.
+3. Faça login de novo com cada usuário, para o token trazer as roles.
+4. Employee: `POST /api/expenses` (cria o rascunho) e `POST /api/expenses/{id}/submit`.
+5. Approver: `POST /api/expenses/{id}/approve`.
+6. Finance: `POST /api/expenses/{id}/pay`.
+7. Auditor: `GET /api/expenses/{id}/history` mostra `Created`, `Submitted`, `Approved` e `Paid`.
+
 ## Swagger
 
 Em ambiente de desenvolvimento, a interface do Swagger fica em `http://localhost:5245/swagger`.
@@ -221,6 +269,12 @@ Em ambiente de desenvolvimento, a interface do Swagger fica em `http://localhost
 Somente testes unitários escritos por você entram na nota. Testes de integração, end-to-end ou de interface são permitidos, mas opcionais e sem pontuação.
 
 Os testes unitários devem executar sem banco, rede ou serviço externo.
+
+Os testes ficam em `sources/ExpenseHub.UnitTests` e cobrem as regras de domínio (`Domain/`), a visibilidade e as regras de roles (`Services/`) e a validação dos DTOs (`Validation/`). Para executar:
+
+```shell
+dotnet test ./sources/ExpenseHub.slnx
+```
 
 ## Entrega
 
