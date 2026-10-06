@@ -4,6 +4,11 @@ Checkpoint de C# em grupos de até 3 pessoas para construção de uma Applicatio
 
 O prazo de entrega é **13 de outubro de 2026**. O grupo deverá implementar autenticação, autorização, fluxo de aprovação e reprovação, pagamento simulado, histórico e testes unitários.
 
+## INTEGRANTES
+
+Gustavo Laur Pisanello | 556603
+Leonardo de Farias | 555211
+
 ## Criar seu repositório
 
 1. Clique em **Use this template**.
