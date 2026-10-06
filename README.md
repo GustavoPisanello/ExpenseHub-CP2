@@ -7,6 +7,7 @@ O prazo de entrega é **13 de outubro de 2026**. O grupo deverá implementar aut
 ## INTEGRANTES
 
 Gustavo Laur Pisanello | 556603
+
 Leonardo de Farias | 555211
 
 ## Criar seu repositório
